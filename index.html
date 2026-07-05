@@ -20,91 +20,28 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap" rel="stylesheet">
     <title>Ciggi Counter</title>
-    <script>
-(function () {
-  var STORAGE_KEY = "cigicounter-data";
-  var origFetch = window.fetch;
-
-  function loadData() {
-    try {
-      return JSON.parse(
-        localStorage.getItem(STORAGE_KEY) ||
-          '{"cigarettes":[],"settings":{"dailyGoal":null}}'
-      );
-    } catch (e) {
-      return { cigarettes: [], settings: { dailyGoal: null } };
-    }
-  }
-
-  function saveData(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }
-
-  function jsonResponse(body, status) {
-    return new Response(JSON.stringify(body), {
-      status: status || 200,
+    <script type="module">
+async function migrateFromLocalStorage() {
+  const key = "cigicounter-data";
+  const raw = localStorage.getItem(key);
+  if (!raw) return;
+  try {
+    const data = JSON.parse(raw);
+    const res = await fetch("/api/migrate", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
     });
-  }
-
-  function nextId() {
-    return crypto.randomUUID
-      ? crypto.randomUUID()
-      : String(Date.now()) + "-" + Math.random().toString(16).slice(2);
-  }
-
-  window.fetch = function (input, init) {
-    var url = typeof input === "string" ? input : input.url;
-    var match = url.match(/(\/api\/.*)$/);
-    if (!match) {
-      return origFetch.apply(this, arguments);
+    if (res.ok) {
+      const { migrated } = await res.json();
+      if (migrated) localStorage.removeItem(key);
     }
+  } catch (_) {}
+}
 
-    var path = match[1].split("?")[0];
-    var method = ((init && init.method) || "GET").toUpperCase();
-    var data = loadData();
-
-    if (path === "/api/cigarettes" && method === "GET") {
-      return Promise.resolve(jsonResponse(data.cigarettes));
-    }
-
-    if (path === "/api/cigarettes" && method === "POST") {
-      var body = JSON.parse((init && init.body) || "{}");
-      var record = { id: nextId(), smokedAt: body.smokedAt };
-      data.cigarettes.push(record);
-      saveData(data);
-      return Promise.resolve(jsonResponse(record, 201));
-    }
-
-    if (path.indexOf("/api/cigarettes/") === 0 && method === "DELETE") {
-      var id = path.slice("/api/cigarettes/".length);
-      data.cigarettes = data.cigarettes.filter(function (c) {
-        return c.id !== id;
-      });
-      saveData(data);
-      return Promise.resolve(new Response(null, { status: 204 }));
-    }
-
-    if (path === "/api/settings/daily-goal" && method === "GET") {
-      return Promise.resolve(
-        jsonResponse({ dailyGoal: data.settings.dailyGoal })
-      );
-    }
-
-    if (path === "/api/settings/daily-goal" && method === "PUT") {
-      var settingsBody = JSON.parse((init && init.body) || "{}");
-      data.settings.dailyGoal = settingsBody.dailyGoal;
-      saveData(data);
-      return Promise.resolve(
-        jsonResponse({ dailyGoal: settingsBody.dailyGoal })
-      );
-    }
-
-    return origFetch.apply(this, arguments);
-  };
-})();
+await migrateFromLocalStorage();
+await import("./assets/index-D9dZHLx3.js");
     </script>
-    <script type="module" crossorigin src="./assets/index-D9dZHLx3.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-_rODclOj.css">
   </head>
   <body>
