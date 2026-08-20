@@ -21,7 +21,7 @@ const db = require("./db");
 
 const app = express();
 app.use(express.json());
-app.use(routes);
+app.use("/api", routes);
 
 function request(method, urlPath, body) {
   return new Promise((resolve, reject) => {
@@ -74,7 +74,7 @@ async function main() {
   const from = "2026-08-20T12:00:00.000Z";
   const to = "2026-08-20T16:00:00.000Z";
 
-  const created = await request("POST", "/cigarettes/multi", {
+  const created = await request("POST", "/api/cigarettes/multi", {
     from,
     to,
     count: 4,
@@ -97,11 +97,11 @@ async function main() {
     assert.ok(row.id.length > 0);
   }
 
-  const listed = await request("GET", "/cigarettes");
+  const listed = await request("GET", "/api/cigarettes");
   assert.equal(listed.status, 200);
   assert.equal(listed.body.length, 4);
 
-  const invalid = await request("POST", "/cigarettes/multi", {
+  const invalid = await request("POST", "/api/cigarettes/multi", {
     from: to,
     to: from,
     count: 4,
@@ -110,10 +110,10 @@ async function main() {
   });
   assert.equal(invalid.status, 400);
   assert.equal(listed.body.length, 4);
-  const afterInvalid = await request("GET", "/cigarettes");
+  const afterInvalid = await request("GET", "/api/cigarettes");
   assert.equal(afterInvalid.body.length, 4);
 
-  const bothOne = await request("POST", "/cigarettes/multi", {
+  const bothOne = await request("POST", "/api/cigarettes/multi", {
     from,
     to,
     count: 1,
@@ -121,7 +121,7 @@ async function main() {
     includeTo: true,
   });
   assert.equal(bothOne.status, 400);
-  const afterBoth = await request("GET", "/cigarettes");
+  const afterBoth = await request("GET", "/api/cigarettes");
   assert.equal(afterBoth.body.length, 4);
 
   console.log("ok");
