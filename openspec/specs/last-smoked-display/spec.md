@@ -19,7 +19,7 @@ The top dashboard stats card SHALL display the absolute date and time of the mos
 
 ### Requirement: Preserve existing elapsed-time display
 
-The "Time since last ciggi" label, `data-testid="text-elapsed"`, 1-second refresh behaviour, empty state ("No ciggis logged"), and placement alongside "Last ciggi at" SHALL remain. When the elapsed duration is one hour or more, the value SHALL show whole hours and remaining minutes in the form `{hours}hrs {minutes}m` (e.g. "3hrs 18m"). When under one hour, the value SHALL continue using the existing relative `formatDistance` output.
+The "Time since last ciggi" label, `data-testid="text-elapsed"`, 1-second refresh behaviour, empty state ("No ciggis logged"), and placement alongside "Last ciggi at" SHALL remain. When the elapsed duration is 24 hours or more, the value SHALL show whole days and remaining hours in the form `{days}d {hours}hrs` (e.g. "1d 12hrs"), including `0hrs` when remaining hours are zero. When the elapsed duration is one hour or more but less than 24 hours, the value SHALL show whole hours and remaining minutes in the form `{hours}hrs {minutes}m` (e.g. "3hrs 18m"). When under one hour, the value SHALL continue using the existing relative `formatDistance` output.
 
 #### Scenario: User views dashboard with logged cigarettes
 
@@ -27,9 +27,15 @@ The "Time since last ciggi" label, `data-testid="text-elapsed"`, 1-second refres
 - **THEN** the elapsed-time display continues to show live-updating time since last smoke
 - **AND** the "Last ciggi at" date/time display appears alongside it in the same card
 
-#### Scenario: Elapsed duration is one hour or more
+#### Scenario: Elapsed duration is 24 hours or more
 
-- **WHEN** at least one hour has passed since the most recent cigarette
+- **WHEN** at least 24 hours have passed since the most recent cigarette
+- **THEN** the elapsed-time value shows whole days and remaining hours (e.g. "1d 12hrs", "1d 0hrs")
+- **AND** the hours component updates as time passes
+
+#### Scenario: Elapsed duration is one hour or more but less than 24 hours
+
+- **WHEN** at least one hour and less than 24 hours have passed since the most recent cigarette
 - **THEN** the elapsed-time value shows whole hours and remaining minutes (e.g. "3hrs 18m")
 - **AND** the minutes component updates as time passes
 
