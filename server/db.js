@@ -3,10 +3,12 @@ const path = require("path");
 const { DatabaseSync } = require("node:sqlite");
 
 const dataDir = path.join(__dirname, "..", "data");
-const dbPath = path.join(dataDir, "cigicounter.db");
+const dbPath =
+  process.env.CIGICOUNTER_DB || path.join(dataDir, "cigicounter.db");
 
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
 }
 
 const db = new DatabaseSync(dbPath);

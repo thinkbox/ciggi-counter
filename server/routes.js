@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const { Router } = require("express");
 const db = require("./db");
+const { distributeSmokedAts } = require("./distribute");
 
 const router = Router();
 
@@ -24,6 +25,40 @@ router.post("/cigarettes", (req, res) => {
     "INSERT INTO cigarettes (id, smoked_at) VALUES (@id, @smokedAt)"
   ).run(record);
   res.status(201).json(record);
+});
+
+router.post("/cigarettes/multi", (req, res) => {
+  const { from, to, count, includeFrom, includeTo } = req.body ?? {};
+  let smokedAts;
+  try {
+    smokedAts = distributeSmokedAts({
+      from,
+      to,
+      count: Number(count),
+      includeFrom: includeFrom === true,
+      includeTo: includeTo === true,
+    });
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+
+  const insert = db.prepare(
+    "INSERT INTO cigarettes (id, smoked_at) VALUES (@id, @smokedAt)"
+  );
+  const records = smokedAts.map((smokedAt) => ({ id: nextId(), smokedAt }));
+
+  db.exec("BEGIN");
+  try {
+    for (const record of records) {
+      insert.run(record);
+    }
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
+
+  res.status(201).json(records);
 });
 
 router.delete("/cigarettes/:id", (req, res) => {
