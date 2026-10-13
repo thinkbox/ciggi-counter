@@ -13,12 +13,15 @@ const {
 
 const router = Router();
 
-function tooCloseResponse(candidates, allowClose) {
+function tooCloseResponse(candidates, allowClose, excludeId) {
   if (allowClose === true) return null;
-  const existing = db
-    .prepare("SELECT smoked_at AS smokedAt FROM cigarettes")
-    .all()
-    .map((row) => row.smokedAt);
+  const existing = (
+    excludeId
+      ? db
+          .prepare("SELECT smoked_at AS smokedAt FROM cigarettes WHERE id != ?")
+          .all(excludeId)
+      : db.prepare("SELECT smoked_at AS smokedAt FROM cigarettes").all()
+  ).map((row) => row.smokedAt);
   const conflicts = closeConflicts(existing, candidates);
   if (conflicts.length === 0) return null;
   return { code: "too_close", conflicts };
@@ -83,6 +86,26 @@ router.post("/cigarettes/multi", (req, res) => {
   }
 
   res.status(201).json(records);
+});
+
+router.put("/cigarettes/:id", (req, res) => {
+  const { smokedAt, allowClose } = req.body ?? {};
+  if (!smokedAt || Number.isNaN(new Date(smokedAt).getTime())) {
+    return res.status(400).json({ error: "Invalid smokedAt" });
+  }
+  const existing = db
+    .prepare("SELECT id FROM cigarettes WHERE id = ?")
+    .get(req.params.id);
+  if (!existing) return res.status(404).json({ error: "Not found" });
+
+  const blocked = tooCloseResponse([smokedAt], allowClose, req.params.id);
+  if (blocked) return res.status(409).json(blocked);
+
+  db.prepare("UPDATE cigarettes SET smoked_at = ? WHERE id = ?").run(
+    smokedAt,
+    req.params.id
+  );
+  res.json({ id: req.params.id, smokedAt });
 });
 
 router.delete("/cigarettes/:id", (req, res) => {
