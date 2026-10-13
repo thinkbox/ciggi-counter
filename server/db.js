@@ -22,6 +22,13 @@ db.exec(`
     key TEXT PRIMARY KEY,
     value TEXT
   );
+  CREATE TABLE IF NOT EXISTS daily_goals (
+    day TEXT PRIMARY KEY,
+    goal INTEGER NOT NULL
+  );
 `);
+
+const { migrateLegacyDailyGoal } = require("./dailyGoals");
+migrateLegacyDailyGoal(db);
 
 module.exports = db;

@@ -38,6 +38,17 @@ function cig(iso) {
     stats.recentDays.map((day) => day.count),
     [1, 1, 0, 0, 0, 1],
   );
+  assert.deepEqual(
+    stats.recentDays.map((day) => day.key),
+    [
+      "2026-09-27",
+      "2026-09-26",
+      "2026-09-25",
+      "2026-09-24",
+      "2026-09-23",
+      "2026-09-22",
+    ],
+  );
 }
 
 // Wednesday 30 Sep 2026. This week still starts Monday and excludes last Sunday.
@@ -60,7 +71,9 @@ function cig(iso) {
   assert.equal(stats.lastWeek, 1);
   assert.equal(stats.recentDays[0].label, "Yesterday");
   assert.equal(stats.recentDays[0].count, 2);
+  assert.equal(stats.recentDays[0].key, "2026-09-29");
   assert.equal(stats.recentDays[1].label, "Monday");
   assert.equal(stats.recentDays[1].count, 1);
+  assert.equal(stats.recentDays[1].key, "2026-09-28");
   assert.equal(stats.recentDays.length, 6);
 }
