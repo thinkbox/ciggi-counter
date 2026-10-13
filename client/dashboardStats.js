@@ -37,6 +37,13 @@ function weekdayName(date) {
   return date.toLocaleDateString("en-US", { weekday: "long" });
 }
 
+function localDayKeyFromDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function dashboardPeriodStats(cigarettes, now) {
   const todayStart = startOfLocalDay(now);
   const todayEnd = endOfLocalDay(now);
@@ -56,6 +63,7 @@ function dashboardPeriodStats(cigarettes, now) {
     const end = endOfLocalDay(day);
     recentDays.push({
       label: offset === 1 ? "Yesterday" : weekdayName(start),
+      key: localDayKeyFromDate(start),
       count: countBetween(cigarettes, start, end),
     });
   }

@@ -3,6 +3,13 @@ const { Router } = require("express");
 const db = require("./db");
 const { distributeSmokedAts } = require("./distribute");
 const { closeConflicts } = require("./closeCiggis");
+const {
+  isRealDay,
+  isValidGoal,
+  listDailyGoals,
+  localToday,
+  upsertDailyGoal,
+} = require("./dailyGoals");
 
 const router = Router();
 
@@ -84,19 +91,16 @@ router.delete("/cigarettes/:id", (req, res) => {
 });
 
 router.get("/settings/daily-goal", (_req, res) => {
-  const row = db
-    .prepare("SELECT value FROM settings WHERE key = 'daily_goal'")
-    .get();
-  const dailyGoal = row ? JSON.parse(row.value) : null;
-  res.json({ dailyGoal });
+  res.json({ goals: listDailyGoals(db) });
 });
 
 router.put("/settings/daily-goal", (req, res) => {
-  const { dailyGoal } = req.body;
-  db.prepare(
-    "INSERT INTO settings (key, value) VALUES ('daily_goal', @value) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
-  ).run({ value: JSON.stringify(dailyGoal ?? null) });
-  res.json({ dailyGoal });
+  const { day, dailyGoal } = req.body ?? {};
+  if (!isRealDay(day) || !isValidGoal(dailyGoal)) {
+    return res.status(400).json({ error: "Invalid daily goal" });
+  }
+  upsertDailyGoal(db, day, dailyGoal);
+  res.json({ day, dailyGoal });
 });
 
 router.post("/migrate", (req, res) => {
@@ -117,10 +121,10 @@ router.post("/migrate", (req, res) => {
     for (const c of cigarettes) {
       insert.run({ id: c.id, smokedAt: c.smokedAt });
     }
-    if (settings.dailyGoal != null) {
+    if (isValidGoal(settings.dailyGoal)) {
       db.prepare(
-        "INSERT INTO settings (key, value) VALUES ('daily_goal', @value) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
-      ).run({ value: JSON.stringify(settings.dailyGoal) });
+        "INSERT OR IGNORE INTO daily_goals (day, goal) VALUES (?, ?)"
+      ).run(localToday(), settings.dailyGoal);
     }
     db.exec("COMMIT");
   } catch (err) {
