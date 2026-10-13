@@ -124,6 +124,58 @@ async function main() {
   const afterBoth = await request("GET", "/api/cigarettes");
   assert.equal(afterBoth.body.length, 4);
 
+  const exactFive = await request("POST", "/api/cigarettes", {
+    smokedAt: "2026-08-20T16:05:00.000Z",
+  });
+  assert.equal(exactFive.status, 201);
+  const afterExact = await request("GET", "/api/cigarettes");
+  assert.equal(afterExact.body.length, 5);
+
+  const tooClose = await request("POST", "/api/cigarettes", {
+    smokedAt: "2026-08-20T16:02:00.000Z",
+  });
+  assert.equal(tooClose.status, 409);
+  assert.equal(tooClose.body.code, "too_close");
+  assert.ok(tooClose.body.conflicts.length >= 1);
+  assert.equal(tooClose.body.conflicts[0].at, "2026-08-20T16:02:00.000Z");
+  assert.equal(typeof tooClose.body.conflicts[0].gapMs, "number");
+  const afterTooClose = await request("GET", "/api/cigarettes");
+  assert.equal(afterTooClose.body.length, 5);
+
+  const allowed = await request("POST", "/api/cigarettes", {
+    smokedAt: "2026-08-20T16:02:00.000Z",
+    allowClose: true,
+  });
+  assert.equal(allowed.status, 201);
+  assert.equal(allowed.body.smokedAt, "2026-08-20T16:02:00.000Z");
+  const afterAllowed = await request("GET", "/api/cigarettes");
+  assert.equal(afterAllowed.body.length, 6);
+
+  const closeBatch = await request("POST", "/api/cigarettes/multi", {
+    from: "2026-08-20T18:00:00.000Z",
+    to: "2026-08-20T18:04:00.000Z",
+    count: 2,
+    includeFrom: true,
+    includeTo: true,
+  });
+  assert.equal(closeBatch.status, 409);
+  assert.equal(closeBatch.body.code, "too_close");
+  const afterCloseBatch = await request("GET", "/api/cigarettes");
+  assert.equal(afterCloseBatch.body.length, 6);
+
+  const allowedBatch = await request("POST", "/api/cigarettes/multi", {
+    from: "2026-08-20T18:00:00.000Z",
+    to: "2026-08-20T18:04:00.000Z",
+    count: 2,
+    includeFrom: true,
+    includeTo: true,
+    allowClose: true,
+  });
+  assert.equal(allowedBatch.status, 201);
+  assert.equal(allowedBatch.body.length, 2);
+  const afterAllowedBatch = await request("GET", "/api/cigarettes");
+  assert.equal(afterAllowedBatch.body.length, 8);
+
   console.log("ok");
 }
 

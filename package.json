@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "node server/distribute.test.js && node server/multi.test.js && node client/nextCiggiPace.test.js && node client/dashboardStats.test.js && node client/historyPagination.test.js"
+    "test": "node server/closeCiggis.test.js && node server/distribute.test.js && node server/multi.test.js && node client/nextCiggiPace.test.js && node client/dashboardStats.test.js && node client/historyPagination.test.js"
   },
   "dependencies": {
     "express": "^5.1.0"
