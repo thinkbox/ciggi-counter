@@ -2,8 +2,20 @@ const crypto = require("crypto");
 const { Router } = require("express");
 const db = require("./db");
 const { distributeSmokedAts } = require("./distribute");
+const { closeConflicts } = require("./closeCiggis");
 
 const router = Router();
+
+function tooCloseResponse(candidates, allowClose) {
+  if (allowClose === true) return null;
+  const existing = db
+    .prepare("SELECT smoked_at AS smokedAt FROM cigarettes")
+    .all()
+    .map((row) => row.smokedAt);
+  const conflicts = closeConflicts(existing, candidates);
+  if (conflicts.length === 0) return null;
+  return { code: "too_close", conflicts };
+}
 
 function nextId() {
   return crypto.randomUUID();
@@ -19,7 +31,9 @@ router.get("/cigarettes", (_req, res) => {
 });
 
 router.post("/cigarettes", (req, res) => {
-  const { smokedAt } = req.body;
+  const { smokedAt, allowClose } = req.body;
+  const blocked = tooCloseResponse([smokedAt], allowClose);
+  if (blocked) return res.status(409).json(blocked);
   const record = { id: nextId(), smokedAt };
   db.prepare(
     "INSERT INTO cigarettes (id, smoked_at) VALUES (@id, @smokedAt)"
@@ -28,7 +42,7 @@ router.post("/cigarettes", (req, res) => {
 });
 
 router.post("/cigarettes/multi", (req, res) => {
-  const { from, to, count, includeFrom, includeTo } = req.body ?? {};
+  const { from, to, count, includeFrom, includeTo, allowClose } = req.body ?? {};
   let smokedAts;
   try {
     smokedAts = distributeSmokedAts({
@@ -41,6 +55,9 @@ router.post("/cigarettes/multi", (req, res) => {
   } catch (err) {
     return res.status(400).json({ error: err.message });
   }
+
+  const blocked = tooCloseResponse(smokedAts, allowClose);
+  if (blocked) return res.status(409).json(blocked);
 
   const insert = db.prepare(
     "INSERT INTO cigarettes (id, smoked_at) VALUES (@id, @smokedAt)"
