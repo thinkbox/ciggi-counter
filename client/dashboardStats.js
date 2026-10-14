@@ -1,3 +1,8 @@
+// Counts for the dashboard cards: today, this week, last week, and the
+// six days before today. Weeks run Monday to Sunday.
+
+const { formatLocalDay } = require("../shared/dates");
+
 function startOfLocalDay(date) {
   const day = new Date(date);
   day.setHours(0, 0, 0, 0);
@@ -12,6 +17,7 @@ function endOfLocalDay(date) {
 
 function startOfWeekMonday(date) {
   const day = startOfLocalDay(date);
+  // getDay() is 0 for Sunday. This shifts the week so Monday is the start.
   const daysSinceMonday = (day.getDay() + 6) % 7;
   day.setDate(day.getDate() - daysSinceMonday);
   return day;
@@ -37,13 +43,6 @@ function weekdayName(date) {
   return date.toLocaleDateString("en-US", { weekday: "long" });
 }
 
-function localDayKeyFromDate(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
 function dashboardPeriodStats(cigarettes, now) {
   const todayStart = startOfLocalDay(now);
   const todayEnd = endOfLocalDay(now);
@@ -63,7 +62,7 @@ function dashboardPeriodStats(cigarettes, now) {
     const end = endOfLocalDay(day);
     recentDays.push({
       label: offset === 1 ? "Yesterday" : weekdayName(start),
-      key: localDayKeyFromDate(start),
+      key: formatLocalDay(start),
       count: countBetween(cigarettes, start, end),
     });
   }
@@ -76,10 +75,4 @@ function dashboardPeriodStats(cigarettes, now) {
   };
 }
 
-if (typeof module === "object" && module.exports) {
-  module.exports = { dashboardPeriodStats };
-}
-
-if (typeof window !== "undefined") {
-  window.dashboardPeriodStats = dashboardPeriodStats;
-}
+module.exports = { dashboardPeriodStats };

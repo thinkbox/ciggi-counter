@@ -1,3 +1,7 @@
+// Spreads `count` timestamps evenly between `from` and `to`.
+// The include flags decide whether the first and last ciggi sit on the
+// endpoints or just inside them.
+
 function distributeSmokedAts({ from, to, count, includeFrom, includeTo }) {
   const start = new Date(from).getTime();
   const end = new Date(to).getTime();

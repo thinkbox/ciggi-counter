@@ -4,10 +4,25 @@
   "private": true,
   "scripts": {
     "start": "node server/index.js",
-    "dev": "node --watch server/index.js",
-    "test": "node server/closeCiggis.test.js && node server/distribute.test.js && node server/multi.test.js && node server/dailyGoal.test.js && node server/updateCiggi.test.js && node client/dailyGoal.test.js && node client/nextCiggiPace.test.js && node client/dashboardStats.test.js && node client/historyPagination.test.js && node client/historyPage.test.js"
+    "dev": "concurrently -k \"node --watch-path=server server/index.js\" vite",
+    "build": "vite build",
+    "test": "node server/closeCiggis.test.js && node server/distribute.test.js && node server/multi.test.js && node server/dailyGoal.test.js && node server/updateCiggi.test.js && node client/dailyGoal.test.js && node client/nextCiggiPace.test.js && node client/dashboardStats.test.js && node client/historyPagination.test.js && node client/historyPage.test.js && node client/timeFormat.test.js && node client/stats.test.js && node client/allowClose.test.js"
   },
   "dependencies": {
-    "express": "^5.1.0"
+    "@tanstack/react-query": "^5.104.2",
+    "date-fns": "^4.4.0",
+    "express": "^5.1.0",
+    "lucide-react": "^1.56.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "recharts": "^3.10.1",
+    "wouter": "^3.13.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-react": "^6.1.2",
+    "concurrently": "^10.0.6",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.4"
   }
 }

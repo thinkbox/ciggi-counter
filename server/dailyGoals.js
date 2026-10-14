@@ -1,8 +1,10 @@
+// Daily goals, one row per calendar day. The goal for a day is the most
+// recent row on or before that day (see goalForDay in the client).
+
+const { formatLocalDay } = require("../shared/dates");
+
 function localToday(now = new Date()) {
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return formatLocalDay(now);
 }
 
 function isRealDay(day) {
