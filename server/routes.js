@@ -1,3 +1,11 @@
+// HTTP routes. A cigarette is an id plus the time it was smoked.
+// Daily goals are one limit per calendar day.
+//
+// `req` is the incoming request. `res` is the reply. `res.json(...)` sends
+// an object as JSON text. Status 201 means "created". 204 means "done,
+// no body". 400 means the input was bad. 409 means "too close to another
+// ciggi" unless the client confirmed with allowClose: true.
+
 const crypto = require("crypto");
 const { Router } = require("express");
 const db = require("./db");
@@ -13,6 +21,8 @@ const {
 
 const router = Router();
 
+// Rejects a log that lands within five minutes of one already stored.
+// `excludeId` is set when editing, so a ciggi is not compared with itself.
 function tooCloseResponse(candidates, allowClose, excludeId) {
   if (allowClose === true) return null;
   const existing = (

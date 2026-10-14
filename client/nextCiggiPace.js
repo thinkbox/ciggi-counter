@@ -1,3 +1,7 @@
+// How long until the next ciggi if today's remaining allowance is spread
+// evenly across the rest of the day. Returns null when there is no goal,
+// the goal is already met, or the inputs are not usable.
+
 const PACE_COLORS = {
   red: "#dc2626",
   orange: "#f97316",
@@ -91,13 +95,4 @@ const api = {
   latestCiggiToday,
 };
 
-if (typeof module === "object" && module.exports) {
-  module.exports = api;
-}
-
-if (typeof window !== "undefined") {
-  window.nextCiggiPace = nextCiggiPace;
-  window.formatPaceClock = formatPaceClock;
-  window.localDayBounds = localDayBounds;
-  window.latestCiggiToday = latestCiggiToday;
-}
+module.exports = api;
