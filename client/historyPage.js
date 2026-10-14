@@ -1,9 +1,8 @@
-function getNextCiggiPace() {
-  if (typeof window !== "undefined" && typeof window.nextCiggiPace === "function") {
-    return window.nextCiggiPace;
-  }
-  return require("./nextCiggiPace").nextCiggiPace;
-}
+// History-screen helpers: day labels, which day the arrows should open,
+// and the date/time to prefill when adding a ciggi on that day.
+
+const { nextCiggiPace } = require("./nextCiggiPace");
+const { formatLocalDay } = require("../shared/dates");
 
 const MONTHS = [
   "Jan",
@@ -29,10 +28,6 @@ function parseDayKey(dayKey) {
   const start = new Date(year, month - 1, day, 0, 0, 0, 0);
   const end = new Date(year, month - 1, day + 1, 0, 0, 0, 0);
   return { start: start.getTime(), end: end.getTime() };
-}
-
-function formatLocalDay(date) {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 function formatClock(date) {
@@ -62,6 +57,9 @@ function dateTimeInputs(iso) {
   };
 }
 
+// Prefills Add Ciggi. If the pace target is still ahead and we are looking
+// at today, use the current time. Otherwise use the pace target, or 23:59
+// when that target would fall off the end of the day.
 function suggestedHistoryAdd({ dayKey, cigarettes, dailyGoal, now }) {
   const nowDate = now instanceof Date ? now : new Date(now);
   const nowMs = nowDate.getTime();
@@ -80,7 +78,7 @@ function suggestedHistoryAdd({ dayKey, cigarettes, dailyGoal, now }) {
 
   let target = null;
   if (latest !== null) {
-    const pace = getNextCiggiPace()({
+    const pace = nextCiggiPace({
       dailyGoal,
       todayCount: count,
       anchorAt: latest,
@@ -111,13 +109,4 @@ const historyPageApi = {
   dateTimeInputs,
 };
 
-if (typeof module === "object" && module.exports) {
-  module.exports = historyPageApi;
-}
-
-if (typeof window !== "undefined") {
-  window.formatHistoryNavLabel = formatHistoryNavLabel;
-  window.historyNavTargets = historyNavTargets;
-  window.suggestedHistoryAdd = suggestedHistoryAdd;
-  window.dateTimeInputs = dateTimeInputs;
-}
+module.exports = historyPageApi;

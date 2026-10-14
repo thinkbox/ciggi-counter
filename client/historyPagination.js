@@ -1,11 +1,12 @@
+// Splits the history list into one calendar day at a time, newest day first,
+// and optionally into pages when a single day has a lot of entries.
+
+const { formatLocalDay } = require("../shared/dates");
+
 const PAGE_SIZES = new Set([10, 20, 50]);
 
 function localDayKey(iso) {
-  const date = new Date(iso);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return formatLocalDay(new Date(iso));
 }
 
 function normalizePageSize(pageSize) {
@@ -105,18 +106,9 @@ function nearestDayKey(days, removedKey) {
   return null;
 }
 
-if (typeof module === "object" && module.exports) {
-  module.exports = {
-    localDayKey,
-    paginateHistory,
-    pageIndexForId,
-    nearestDayKey,
-  };
-}
-
-if (typeof window !== "undefined") {
-  window.localDayKey = localDayKey;
-  window.paginateHistory = paginateHistory;
-  window.pageIndexForId = pageIndexForId;
-  window.nearestDayKey = nearestDayKey;
-}
+module.exports = {
+  localDayKey,
+  paginateHistory,
+  pageIndexForId,
+  nearestDayKey,
+};

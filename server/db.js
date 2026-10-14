@@ -1,3 +1,7 @@
+// Opens the SQLite file and creates the tables the first time the app runs.
+// `CIGICOUNTER_DB` overrides the file path, which the tests use so they
+// do not write the real data/cigicounter.db.
+
 const fs = require("fs");
 const path = require("path");
 const { DatabaseSync } = require("node:sqlite");

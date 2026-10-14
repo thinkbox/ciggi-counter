@@ -1,12 +1,14 @@
-function formatLocalDay(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
+// Which daily goal is in force on a given calendar day.
+//
+// Goals are stored as "from this date onward, the limit is N" until a later
+// date sets a new limit. A day with no goal on or before it has no limit.
+
+const { formatLocalDay } = require("../shared/dates");
 
 function goalForDay(goals, dayKey) {
   let match = null;
+  // `??` means "if the left side is null or undefined, use the right side".
+  // So a missing goals list is treated as empty.
   for (const row of goals ?? []) {
     if (row.day <= dayKey && (match === null || row.day > match.day)) {
       match = row;
@@ -44,12 +46,4 @@ function periodGoalSummary(goals, startDate, endDate) {
   return { budget, daysWithGoal, daysWithoutGoal, dayCount };
 }
 
-if (typeof module === "object" && module.exports) {
-  module.exports = { formatLocalDay, goalForDay, periodGoalSummary };
-}
-
-if (typeof window !== "undefined") {
-  window.formatLocalDay = formatLocalDay;
-  window.goalForDay = goalForDay;
-  window.periodGoalSummary = periodGoalSummary;
-}
+module.exports = { formatLocalDay, goalForDay, periodGoalSummary };

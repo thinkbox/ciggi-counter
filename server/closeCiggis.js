@@ -1,3 +1,7 @@
+// Finds ciggis that are less than five minutes apart. The gap is absolute,
+// so it does not matter which one was logged first. A gap of exactly five
+// minutes is allowed.
+
 const FIVE_MIN_MS = 5 * 60 * 1000;
 
 function closeConflicts(existingIso, candidateIso) {
