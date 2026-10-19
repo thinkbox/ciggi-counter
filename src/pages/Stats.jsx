@@ -1,6 +1,6 @@
 // Totals, a 30-day chart, and this period compared with the one before it.
 
-import { BarChart3, Target, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { BarChart3, Package, Target, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -13,13 +13,16 @@ import {
 } from "recharts";
 import {
   dailyChartPoints,
+  formatElapsedBetween,
   formatLocalDay,
+  formatPackCost,
+  formatWhen,
   goalForDay,
   periodGoalSummary,
   summarizeStats,
 } from "../logic.js";
 import { Card, Loading } from "../components/ui.jsx";
-import { useCigarettes, useDailyGoals } from "../queries.js";
+import { useCigarettes, useDailyGoals, usePacks } from "../queries.js";
 
 function comparisonCaption(label) {
   if (label === "Today") return "Yesterday";
@@ -203,16 +206,67 @@ const BREAKDOWN = [
   ["All Time", "total"],
 ];
 
+function packAverage(packs) {
+  const finished = packs.filter((pack) => pack.durationMs != null);
+  if (finished.length === 0) return null;
+  const average = finished.reduce((sum, pack) => sum + pack.durationMs, 0) / finished.length;
+  return formatElapsedBetween(new Date(0).toISOString(), new Date(average).toISOString());
+}
+
+function PackHistory({ packs }) {
+  const spent = packs.reduce((sum, pack) => sum + pack.costCents, 0);
+  const average = packAverage(packs);
+  const countLabel = packs.length === 1 ? "1 pack" : `${packs.length} packs`;
+
+  return (
+    <Card className="mt-6">
+      <div className="flex items-center gap-2 px-6 pt-6 pb-3 text-base font-semibold">
+        <Package className="h-4 w-4" />
+        Packs
+      </div>
+      {packs.length === 0 ? (
+        <p className="px-6 pb-6 text-sm text-muted-foreground">No packs opened yet.</p>
+      ) : (
+        <>
+          <p className="px-6 pb-3 text-sm text-muted-foreground" data-testid="text-pack-summary">
+            {countLabel} · {formatPackCost(spent)} spent
+            {average ? ` · ${average} average` : ""}
+          </p>
+          <div className="divide-y divide-border">
+            {packs.map((pack) => (
+              <div key={pack.id} className="px-6 py-4" data-testid={`card-pack-${pack.id}`}>
+                <p className="font-medium">
+                  {pack.brand} · {pack.size}
+                </p>
+                <p className="font-tabular text-sm text-muted-foreground">
+                  {formatPackCost(pack.costCents)} · {formatWhen(pack.openedAt, "EEE d MMM yyyy, h:mm a")}
+                </p>
+                <p className="font-tabular text-sm text-muted-foreground">
+                  {pack.open ? "Still open" : formatElapsedBetween(pack.openedAt, pack.closedAt)}
+                  {" · "}
+                  {pack.smoked} smoked
+                  {pack.givenAway > 0 ? ` · ${pack.givenAway} given away` : ""}
+                </p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
 export function StatsPage() {
   const { data: cigarettes = [], isLoading } = useCigarettes();
+  const { data: packs = [], isLoading: packsLoading } = usePacks();
   const { data: goalData } = useDailyGoals();
   const goals = goalData?.goals ?? [];
 
-  if (isLoading) return <Loading />;
+  if (isLoading || packsLoading) return <Loading />;
 
   const todayGoal = goalForDay(goals, formatLocalDay(new Date()));
 
-  if (cigarettes.length === 0) {
+  if (cigarettes.length === 0 && packs.length === 0) {
     return (
       <div className="mx-auto max-w-lg px-4 py-8">
         <h1 className="mb-6 text-xl font-bold">Stats</h1>
@@ -302,6 +356,7 @@ export function StatsPage() {
           </div>
         </Card>
       ) : null}
+      <PackHistory packs={packs} />
     </div>
   );
 }

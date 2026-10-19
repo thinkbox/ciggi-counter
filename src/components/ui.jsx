@@ -43,13 +43,14 @@ export function Button({
   );
 }
 
-export function Card({ className, children }) {
+export function Card({ className, children, ...props }) {
   return (
     <div
       className={cx(
         "rounded-xl border border-card-border bg-card text-card-foreground shadow-sm",
         className,
       )}
+      {...props}
     >
       {children}
     </div>

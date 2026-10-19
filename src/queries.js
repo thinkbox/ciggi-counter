@@ -18,11 +18,34 @@ export function useDailyGoals() {
   });
 }
 
+export function usePacks() {
+  return useQuery({
+    queryKey: ["packs"],
+    queryFn: () => getJson("/api/packs"),
+  });
+}
+
+export function useBrands() {
+  return useQuery({
+    queryKey: ["brands"],
+    queryFn: () => getJson("/api/brands"),
+  });
+}
+
 export function useRefresh() {
   const client = useQueryClient();
   return {
     cigarettes() {
-      return client.invalidateQueries({ queryKey: ["cigarettes"] });
+      return Promise.all([
+        client.invalidateQueries({ queryKey: ["cigarettes"] }),
+        client.invalidateQueries({ queryKey: ["packs"] }),
+      ]);
+    },
+    packs() {
+      return client.invalidateQueries({ queryKey: ["packs"] });
+    },
+    brands() {
+      return client.invalidateQueries({ queryKey: ["brands"] });
     },
     // Show a row we just saved before the refetch comes back, so the
     // history page can open that row's day immediately.
