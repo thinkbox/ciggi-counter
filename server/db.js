@@ -30,6 +30,19 @@ db.exec(`
     day TEXT PRIMARY KEY,
     goal INTEGER NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS brands (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS brands_name_nocase ON brands(name COLLATE NOCASE);
+  CREATE TABLE IF NOT EXISTS packs (
+    id TEXT PRIMARY KEY,
+    brand_id TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    cost_cents INTEGER NOT NULL,
+    opened_at TEXT NOT NULL,
+    given_away INTEGER NOT NULL DEFAULT 0
+  );
 `);
 
 const { migrateLegacyDailyGoal } = require("./dailyGoals");

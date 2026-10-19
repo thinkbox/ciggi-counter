@@ -3,6 +3,13 @@
 // (see vite.config.mjs), and these lines pass the functions through.
 
 export { formatLocalDay } from "../shared/dates.js";
+export { ciggisInWindow, placeMissed } from "../shared/placeMissed.js";
+export {
+  dollarsToCents,
+  formatPackCost,
+  packShortfall,
+  selectedPackSize,
+} from "../client/packForm.js";
 export { goalForDay, periodGoalSummary } from "../client/dailyGoal.js";
 export { dashboardPeriodStats } from "../client/dashboardStats.js";
 export {

@@ -6,7 +6,7 @@
     "start": "node server/index.js",
     "dev": "concurrently -k \"node --watch-path=server server/index.js\" vite",
     "build": "vite build",
-    "test": "node server/closeCiggis.test.js && node server/distribute.test.js && node server/multi.test.js && node server/dailyGoal.test.js && node server/updateCiggi.test.js && node client/dailyGoal.test.js && node client/nextCiggiPace.test.js && node client/dashboardStats.test.js && node client/historyPagination.test.js && node client/historyPage.test.js && node client/timeFormat.test.js && node client/stats.test.js && node client/allowClose.test.js"
+    "test": "node server/closeCiggis.test.js && node server/distribute.test.js && node server/multi.test.js && node server/dailyGoal.test.js && node server/updateCiggi.test.js && node server/packs.test.js && node shared/placeMissed.test.js && node client/dailyGoal.test.js && node client/nextCiggiPace.test.js && node client/dashboardStats.test.js && node client/historyPagination.test.js && node client/historyPage.test.js && node client/timeFormat.test.js && node client/stats.test.js && node client/allowClose.test.js && node client/packForm.test.js"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.104.2",

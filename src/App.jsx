@@ -9,6 +9,7 @@ import { useHashLocation } from "wouter/use-hash-location";
 import { Dashboard } from "./pages/Dashboard.jsx";
 import { HistoryPage } from "./pages/History.jsx";
 import { NotFound } from "./pages/NotFound.jsx";
+import { PackReviewPage } from "./pages/PackReview.jsx";
 import { StatsPage } from "./pages/Stats.jsx";
 import { ThemeProvider, ThemeToggle } from "./theme.jsx";
 import { ToastProvider } from "./toast.jsx";
@@ -55,6 +56,7 @@ function Pages() {
       <Route path="/" component={Dashboard} />
       <Route path="/history" component={HistoryPage} />
       <Route path="/stats" component={StatsPage} />
+      <Route path="/packs/review" component={PackReviewPage} />
       <Route component={NotFound} />
     </Switch>
   );

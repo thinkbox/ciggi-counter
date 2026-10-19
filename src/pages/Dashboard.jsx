@@ -3,13 +3,17 @@
 
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Calendar, CalendarRange, Clock, Pencil, Plus, Target } from "lucide-react";
+import { useLocation } from "wouter";
+import { Calendar, CalendarRange, Clock, Package, Pencil, Plus, Target } from "lucide-react";
 import {
   dashboardPeriodStats,
+  formatElapsedBetween,
   formatElapsedLabel,
   formatLastCiggiAt,
   formatLocalDay,
   formatPaceClock,
+  formatPackCost,
+  formatWhen,
   goalForDay,
   lastCiggiOrTodayStart,
   latestCiggiToday,
@@ -20,8 +24,17 @@ import {
 import { postAllowingClose, sendJson } from "../api.js";
 import { GoalDialog } from "../components/GoalDialog.jsx";
 import { GoalRing } from "../components/GoalRing.jsx";
+import { NewPackDialog } from "../components/NewPackDialog.jsx";
 import { Button, Card, Dialog, Field, Input, Loading } from "../components/ui.jsx";
-import { useCigarettes, useDailyGoals, useRefresh } from "../queries.js";
+import {
+  clearPackDraft,
+  keepPackDraft,
+  packDraftKept,
+  releaseKeptDraft,
+  takePackResume,
+  writePackDraft,
+} from "../packDraft.js";
+import { useBrands, useCigarettes, useDailyGoals, usePacks, useRefresh } from "../queries.js";
 import { useToast } from "../toast.jsx";
 
 function reportError(toast, error, title) {
@@ -32,9 +45,13 @@ function reportError(toast, error, title) {
 export function Dashboard() {
   const { toast } = useToast();
   const refresh = useRefresh();
+  const [, navigate] = useLocation();
   const { data: cigarettes = [], isLoading } = useCigarettes();
   const { data: goalData } = useDailyGoals();
+  const { data: packs = [] } = usePacks();
+  const { data: brands = [], isLoading: brandsLoading } = useBrands();
   const goals = goalData?.goals ?? [];
+  const [packOpen, setPackOpen] = useState(false);
 
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [goalOpen, setGoalOpen] = useState(false);
@@ -51,6 +68,14 @@ export function Dashboard() {
     const timer = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (takePackResume()) setPackOpen(true);
+  }, []);
+
+  useEffect(() => {
+    if (packOpen) releaseKeptDraft();
+  }, [packOpen]);
 
   const logNow = useMutation({
     mutationFn: () =>
@@ -413,6 +438,62 @@ export function Dashboard() {
           </Dialog>
         </div>
       </div>
+
+      {packs[0] ? (
+        <Card className="w-full" data-testid="card-open-pack">
+          <div className="flex items-center gap-4 p-6">
+            <div className="rounded-full bg-[hsl(var(--primary)/0.1)] p-3">
+              <Package className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm text-muted-foreground">Open pack</p>
+              <p className="truncate font-medium" data-testid="text-open-pack">
+                {packs[0].brand} · {packs[0].size}
+              </p>
+              <p className="font-tabular text-sm text-muted-foreground">
+                {packs[0].smoked} / {packs[0].size} smoked · {formatPackCost(packs[0].costCents)}
+              </p>
+              <p className="font-tabular text-sm text-muted-foreground">
+                Opened {formatWhen(packs[0].openedAt, "EEE d MMM, h:mm a")} ·{" "}
+                {formatElapsedBetween(packs[0].openedAt, new Date(nowMs).toISOString())}
+              </p>
+            </div>
+          </div>
+        </Card>
+      ) : null}
+
+      <Button
+        variant="outline"
+        className="h-14 w-full rounded-xl"
+        data-testid="button-new-pack"
+        onClick={() => {
+          clearPackDraft();
+          setPackOpen(true);
+        }}
+      >
+        New Pack
+      </Button>
+      <NewPackDialog
+        open={packOpen}
+        onOpenChange={(next) => {
+          if (!next && !packDraftKept()) clearPackDraft();
+          setPackOpen(next);
+        }}
+        cigarettes={cigarettes}
+        packs={packs}
+        brands={brands}
+        brandsLoading={brandsLoading}
+        onReview={(draft) => {
+          writePackDraft(draft);
+          keepPackDraft();
+          setPackOpen(false);
+          navigate("/packs/review");
+        }}
+        onSaved={() => {
+          refresh.cigarettes();
+          refresh.brands();
+        }}
+      />
 
       <div className="grid w-full grid-cols-3 gap-3">
         <CountCard testId="text-today-count" label="Today" value={periods.today} icon={Calendar} />

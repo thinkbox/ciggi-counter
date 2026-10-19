@@ -10,6 +10,7 @@ const crypto = require("crypto");
 const { Router } = require("express");
 const db = require("./db");
 const { distributeSmokedAts } = require("./distribute");
+const { createPack, listBrands, listPacks } = require("./packs");
 const { closeConflicts } = require("./closeCiggis");
 const {
   isRealDay,
@@ -134,6 +135,19 @@ router.put("/settings/daily-goal", (req, res) => {
   }
   upsertDailyGoal(db, day, dailyGoal);
   res.json({ day, dailyGoal });
+});
+
+router.get("/brands", (_req, res) => {
+  res.json(listBrands(db));
+});
+
+router.get("/packs", (_req, res) => {
+  res.json(listPacks(db));
+});
+
+router.post("/packs", (req, res) => {
+  const result = createPack(db, req.body ?? {});
+  res.status(result.status).json(result.body);
 });
 
 router.post("/migrate", (req, res) => {
