@@ -1,6 +1,8 @@
 // Totals, a 30-day chart, and this period compared with the one before it.
 
-import { BarChart3, Package, Target, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { BarChart3, Package, Pencil, Target, Trash2, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -21,8 +23,11 @@ import {
   periodGoalSummary,
   summarizeStats,
 } from "../logic.js";
-import { Card, Loading } from "../components/ui.jsx";
-import { useCigarettes, useDailyGoals, usePacks } from "../queries.js";
+import { sendJson } from "../api.js";
+import { EditPackDialog } from "../components/EditPackDialog.jsx";
+import { Button, Card, Loading } from "../components/ui.jsx";
+import { useBrands, useCigarettes, useDailyGoals, usePacks, useRefresh } from "../queries.js";
+import { useToast } from "../toast.jsx";
 
 function comparisonCaption(label) {
   if (label === "Today") return "Yesterday";
@@ -213,7 +218,7 @@ function packAverage(packs) {
   return formatElapsedBetween(new Date(0).toISOString(), new Date(average).toISOString());
 }
 
-function PackHistory({ packs }) {
+function PackHistory({ packs, onEdit, onDelete, deletePending }) {
   const spent = packs.reduce((sum, pack) => sum + pack.costCents, 0);
   const average = packAverage(packs);
   const countLabel = packs.length === 1 ? "1 pack" : `${packs.length} packs`;
@@ -235,18 +240,43 @@ function PackHistory({ packs }) {
           <div className="divide-y divide-border">
             {packs.map((pack) => (
               <div key={pack.id} className="px-6 py-4" data-testid={`card-pack-${pack.id}`}>
-                <p className="font-medium">
-                  {pack.brand} · {pack.size}
-                </p>
-                <p className="font-tabular text-sm text-muted-foreground">
-                  {formatPackCost(pack.costCents)} · {formatWhen(pack.openedAt, "EEE d MMM yyyy, h:mm a")}
-                </p>
-                <p className="font-tabular text-sm text-muted-foreground">
-                  {pack.open ? "Still open" : formatElapsedBetween(pack.openedAt, pack.closedAt)}
-                  {" · "}
-                  {pack.smoked} smoked
-                  {pack.givenAway > 0 ? ` · ${pack.givenAway} given away` : ""}
-                </p>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium">
+                      {pack.brand} · {pack.size}
+                    </p>
+                    <p className="font-tabular text-sm text-muted-foreground">
+                      {formatPackCost(pack.costCents)} · {formatWhen(pack.openedAt, "EEE d MMM yyyy, h:mm a")}
+                    </p>
+                    <p className="font-tabular text-sm text-muted-foreground">
+                      {pack.open ? "Still open" : formatElapsedBetween(pack.openedAt, pack.closedAt)}
+                      {" · "}
+                      {pack.smoked} smoked
+                      {pack.givenAway > 0 ? ` · ${pack.givenAway} given away` : ""}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Edit pack"
+                      data-testid={`button-edit-pack-${pack.id}`}
+                      onClick={() => onEdit(pack)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Delete pack"
+                      disabled={deletePending}
+                      data-testid={`button-delete-pack-${pack.id}`}
+                      onClick={() => onDelete(pack)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -256,11 +286,35 @@ function PackHistory({ packs }) {
   );
 }
 
+function reportError(toast, error, title) {
+  if (error.cancelled) return;
+  toast({ title, description: error.message, variant: "destructive" });
+}
+
 export function StatsPage() {
+  const { toast } = useToast();
+  const refresh = useRefresh();
   const { data: cigarettes = [], isLoading } = useCigarettes();
   const { data: packs = [], isLoading: packsLoading } = usePacks();
+  const { data: brands = [], isLoading: brandsLoading } = useBrands();
   const { data: goalData } = useDailyGoals();
   const goals = goalData?.goals ?? [];
+  const [editPack, setEditPack] = useState(null);
+
+  const removePack = useMutation({
+    mutationFn: (id) => sendJson("DELETE", `/api/packs/${id}`),
+    onSuccess: () => {
+      refresh.packs();
+      refresh.brands();
+      toast({ title: "Pack deleted", description: "Pack removed." });
+    },
+    onError: (error) => reportError(toast, error, "Couldn't delete"),
+  });
+
+  function askDelete(pack) {
+    if (!window.confirm("Delete this pack?")) return;
+    removePack.mutate(pack.id);
+  }
 
   if (isLoading || packsLoading) return <Loading />;
 
@@ -356,7 +410,26 @@ export function StatsPage() {
           </div>
         </Card>
       ) : null}
-      <PackHistory packs={packs} />
+      <PackHistory
+        packs={packs}
+        onEdit={setEditPack}
+        onDelete={askDelete}
+        deletePending={removePack.isPending}
+      />
+      <EditPackDialog
+        open={editPack != null}
+        onOpenChange={(next) => {
+          if (!next) setEditPack(null);
+        }}
+        pack={editPack}
+        packs={packs}
+        brands={brands}
+        brandsLoading={brandsLoading}
+        onSaved={() => {
+          refresh.packs();
+          refresh.brands();
+        }}
+      />
     </div>
   );
 }

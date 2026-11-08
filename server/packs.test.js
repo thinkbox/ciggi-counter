@@ -224,6 +224,195 @@ async function main() {
   assert.equal(tightPack.givenAway, 0);
   assert.equal(tightPack.smoked, 1);
 
+  const early = "2026-06-01T00:00:00.000Z";
+  const middle = "2026-06-10T00:00:00.000Z";
+  const late = "2026-06-20T00:00:00.000Z";
+  const oldest = await request("POST", "/api/packs", {
+    brand: "Benson",
+    size: 20,
+    costCents: 3000,
+    openedAt: early,
+    toAdd: 0,
+    missed: [],
+  });
+  assert.equal(oldest.status, 201);
+  const mid = await request("POST", "/api/packs", {
+    brand: "Benson",
+    size: 25,
+    costCents: 3200,
+    openedAt: middle,
+    toAdd: 0,
+    missed: [],
+  });
+  assert.equal(mid.status, 201);
+  const newest = await request("POST", "/api/packs", {
+    brand: "Benson",
+    size: 30,
+    costCents: 3400,
+    openedAt: late,
+    toAdd: 0,
+    missed: [],
+  });
+  assert.equal(newest.status, 201);
+
+  const ciggisBeforeEdit = await request("GET", "/api/cigarettes");
+  const beforeEdit = (await request("GET", "/api/packs")).body.find(
+    (pack) => pack.id === oldest.body.id
+  );
+  assert.equal(beforeEdit.givenAway, 20);
+  const midBefore = (await request("GET", "/api/packs")).body.find(
+    (pack) => pack.id === mid.body.id
+  );
+  assert.equal(midBefore.givenAway, 25);
+
+  const moved = "2026-06-05T12:00:00.000Z";
+  const updated = await request("PUT", `/api/packs/${oldest.body.id}`, {
+    brand: "Alpine",
+    size: 40,
+    costCents: 4100,
+    openedAt: moved,
+    givenAway: 999,
+  });
+  assert.equal(updated.status, 200);
+  assert.equal(updated.body.brand, "Alpine");
+  assert.equal(updated.body.size, 40);
+  assert.equal(updated.body.costCents, 4100);
+  assert.equal(updated.body.openedAt, moved);
+  assert.equal(updated.body.givenAway, 20);
+
+  const brandsAfter = await request("GET", "/api/brands");
+  assert.equal(brandsAfter.body.filter((brand) => brand.name === "Alpine").length, 1);
+  assert.ok(brandsAfter.body.some((brand) => brand.name === "Benson"));
+
+  const edited = (await request("GET", "/api/packs")).body.find(
+    (pack) => pack.id === oldest.body.id
+  );
+  assert.equal(edited.brand, "Alpine");
+  assert.equal(edited.size, 40);
+  assert.equal(edited.costCents, 4100);
+  assert.equal(edited.openedAt, moved);
+  assert.equal(edited.givenAway, 20);
+  assert.ok(
+    (await request("GET", "/api/packs")).body.some((pack) => pack.brand === "Benson")
+  );
+
+  const midMoved = "2026-06-12T00:00:00.000Z";
+  const reusedBrand = await request("PUT", `/api/packs/${mid.body.id}`, {
+    brand: "winfield",
+    size: 20,
+    costCents: 1111,
+    openedAt: midMoved,
+  });
+  assert.equal(reusedBrand.status, 200);
+  assert.equal(reusedBrand.body.brand, "Winfield");
+  assert.equal(reusedBrand.body.givenAway, 25);
+  const winfieldBrands = (await request("GET", "/api/brands")).body.filter(
+    (brand) => brand.name.toLowerCase() === "winfield"
+  );
+  assert.equal(winfieldBrands.length, 1);
+  assert.equal(winfieldBrands[0].name, "Winfield");
+
+  const futureEdit = await request("PUT", `/api/packs/${mid.body.id}`, {
+    brand: "Winfield",
+    size: 20,
+    costCents: 1111,
+    openedAt: "2099-01-01T00:00:00.000Z",
+  });
+  assert.equal(futureEdit.status, 400);
+  assert.match(futureEdit.body.error, /future/);
+
+  const tooEarly = await request("PUT", `/api/packs/${mid.body.id}`, {
+    brand: "Winfield",
+    size: 20,
+    costCents: 1111,
+    openedAt: "2026-06-04T00:00:00.000Z",
+  });
+  assert.equal(tooEarly.status, 400);
+  assert.match(tooEarly.body.error, /previous pack/);
+
+  const tooLate = await request("PUT", `/api/packs/${mid.body.id}`, {
+    brand: "Winfield",
+    size: 20,
+    costCents: 1111,
+    openedAt: "2026-06-21T00:00:00.000Z",
+  });
+  assert.equal(tooLate.status, 400);
+  assert.match(tooLate.body.error, /next pack/);
+
+  const equalPrevious = await request("PUT", `/api/packs/${mid.body.id}`, {
+    brand: "Winfield",
+    size: 20,
+    costCents: 1111,
+    openedAt: moved,
+  });
+  assert.equal(equalPrevious.status, 400);
+  assert.match(equalPrevious.body.error, /previous pack/);
+
+  const equalNext = await request("PUT", `/api/packs/${mid.body.id}`, {
+    brand: "Winfield",
+    size: 20,
+    costCents: 1111,
+    openedAt: late,
+  });
+  assert.equal(equalNext.status, 400);
+  assert.match(equalNext.body.error, /next pack/);
+
+  const missingPack = await request("PUT", "/api/packs/missing-pack", {
+    brand: "Winfield",
+    size: 20,
+    costCents: 100,
+    openedAt: midMoved,
+  });
+  assert.equal(missingPack.status, 404);
+
+  const badSize = await request("PUT", `/api/packs/${mid.body.id}`, {
+    brand: "Winfield",
+    size: 0,
+    costCents: 100,
+    openedAt: midMoved,
+  });
+  assert.equal(badSize.status, 400);
+
+  const badCost = await request("PUT", `/api/packs/${mid.body.id}`, {
+    brand: "Winfield",
+    size: 20,
+    costCents: -1,
+    openedAt: midMoved,
+  });
+  assert.equal(badCost.status, 400);
+
+  const afterRejects = await request("GET", "/api/packs");
+  const midRow = afterRejects.body.find((pack) => pack.id === mid.body.id);
+  assert.equal(midRow.openedAt, midMoved);
+  assert.equal(midRow.costCents, 1111);
+  assert.equal(midRow.givenAway, 25);
+  assert.equal(
+    afterRejects.body.find((pack) => pack.id === oldest.body.id).givenAway,
+    20
+  );
+  const ciggisAfterEdit = await request("GET", "/api/cigarettes");
+  assert.equal(ciggisAfterEdit.body.length, ciggisBeforeEdit.body.length);
+
+  const deleteMissing = await request("DELETE", "/api/packs/missing-pack");
+  assert.equal(deleteMissing.status, 404);
+
+  const deleted = await request("DELETE", `/api/packs/${newest.body.id}`);
+  assert.equal(deleted.status, 204);
+  assert.equal(deleted.body, null);
+
+  const afterDelete = await request("GET", "/api/packs");
+  assert.equal(
+    afterDelete.body.find((pack) => pack.id === newest.body.id),
+    undefined
+  );
+  const nowOpen = afterDelete.body.find((pack) => pack.id === mid.body.id);
+  assert.equal(nowOpen.open, true);
+  assert.equal(nowOpen.closedAt, null);
+  assert.equal(nowOpen.durationMs, null);
+  assert.equal(nowOpen.givenAway, 25);
+  const ciggisAfterDelete = await request("GET", "/api/cigarettes");
+  assert.equal(ciggisAfterDelete.body.length, ciggisBeforeEdit.body.length);
+
   console.log("ok");
 }
 

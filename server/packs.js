@@ -204,4 +204,74 @@ function createPack(db, body, now = Date.now()) {
   }
 }
 
-module.exports = { createPack, listBrands, listPacks };
+// An edit changes brand, size, cost, and open time. given_away stays as it
+// was stored when the following pack was opened. Cigarettes are not written.
+function updatePack(db, id, body, now = Date.now()) {
+  const current = db
+    .prepare(
+      `SELECT id, opened_at AS openedAt, given_away AS givenAway
+       FROM packs WHERE id = ?`
+    )
+    .get(id);
+  if (!current) return { status: 404, body: { error: "Not found" } };
+
+  const brandName = parseBrand(body?.brand);
+  const size = parseSize(body?.size);
+  const costCents = parseCostCents(body?.costCents);
+  const openedAtMs = parseTime(body?.openedAt);
+  if (!brandName || size == null || costCents == null || openedAtMs == null) {
+    return fail("Check the pack size, brand, cost, and open time.");
+  }
+  if (openedAtMs > now) return fail("Open time can't be in the future.");
+
+  const others = db
+    .prepare("SELECT opened_at AS openedAt FROM packs WHERE id != ?")
+    .all(id);
+  const currentMs = new Date(current.openedAt).getTime();
+  let previousMs = null;
+  let nextMs = null;
+  for (const other of others) {
+    const time = new Date(other.openedAt).getTime();
+    if (time < currentMs && (previousMs == null || time > previousMs)) previousMs = time;
+    if (time > currentMs && (nextMs == null || time < nextMs)) nextMs = time;
+  }
+  if (previousMs != null && openedAtMs <= previousMs) {
+    return fail("Open time must be after the previous pack.");
+  }
+  if (nextMs != null && openedAtMs >= nextMs) {
+    return fail("Open time must be before the next pack.");
+  }
+
+  const openedAt = new Date(openedAtMs).toISOString();
+  db.exec("BEGIN");
+  try {
+    const brand = findOrCreateBrand(db, brandName);
+    db.prepare(
+      `UPDATE packs SET brand_id = ?, size = ?, cost_cents = ?, opened_at = ? WHERE id = ?`
+    ).run(brand.id, size, costCents, openedAt, id);
+    db.exec("COMMIT");
+    return {
+      status: 200,
+      body: {
+        id,
+        brand: brand.name,
+        size,
+        costCents,
+        openedAt,
+        givenAway: current.givenAway,
+      },
+    };
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
+}
+
+function deletePack(db, id) {
+  const current = db.prepare("SELECT id FROM packs WHERE id = ?").get(id);
+  if (!current) return { status: 404, body: { error: "Not found" } };
+  db.prepare("DELETE FROM packs WHERE id = ?").run(id);
+  return { status: 204, body: null };
+}
+
+module.exports = { createPack, deletePack, listBrands, listPacks, updatePack };

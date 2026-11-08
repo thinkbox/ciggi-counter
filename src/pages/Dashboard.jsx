@@ -24,6 +24,7 @@ import {
 import { postAllowingClose, sendJson } from "../api.js";
 import { GoalDialog } from "../components/GoalDialog.jsx";
 import { GoalRing } from "../components/GoalRing.jsx";
+import { EditPackDialog } from "../components/EditPackDialog.jsx";
 import { NewPackDialog } from "../components/NewPackDialog.jsx";
 import { Button, Card, Dialog, Field, Input, Loading } from "../components/ui.jsx";
 import {
@@ -52,6 +53,7 @@ export function Dashboard() {
   const { data: brands = [], isLoading: brandsLoading } = useBrands();
   const goals = goalData?.goals ?? [];
   const [packOpen, setPackOpen] = useState(false);
+  const [editPackOpen, setEditPackOpen] = useState(false);
 
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [goalOpen, setGoalOpen] = useState(false);
@@ -439,40 +441,69 @@ export function Dashboard() {
         </div>
       </div>
 
-      {packs[0] ? (
-        <Card className="w-full" data-testid="card-open-pack">
-          <div className="flex items-center gap-4 p-6">
-            <div className="rounded-full bg-[hsl(var(--primary)/0.1)] p-3">
-              <Package className="h-5 w-5 text-primary" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm text-muted-foreground">Open pack</p>
-              <p className="truncate font-medium" data-testid="text-open-pack">
-                {packs[0].brand} · {packs[0].size}
-              </p>
-              <p className="font-tabular text-sm text-muted-foreground">
-                {packs[0].smoked} / {packs[0].size} smoked · {formatPackCost(packs[0].costCents)}
-              </p>
-              <p className="font-tabular text-sm text-muted-foreground">
-                Opened {formatWhen(packs[0].openedAt, "EEE d MMM, h:mm a")} ·{" "}
-                {formatElapsedBetween(packs[0].openedAt, new Date(nowMs).toISOString())}
-              </p>
-            </div>
+      <Card className="w-full" data-testid="card-open-pack">
+        <div className="flex items-center gap-4 p-6">
+          <div className="rounded-full bg-[hsl(var(--primary)/0.1)] p-3">
+            <Package className="h-5 w-5 text-primary" />
           </div>
-        </Card>
-      ) : null}
-
-      <Button
-        variant="outline"
-        className="h-14 w-full rounded-xl"
-        data-testid="button-new-pack"
-        onClick={() => {
-          clearPackDraft();
-          setPackOpen(true);
+          <div className="min-w-0 flex-1">
+            {packs[0] ? (
+              <>
+                <p className="text-sm text-muted-foreground">Open pack</p>
+                <p className="truncate font-medium" data-testid="text-open-pack">
+                  {packs[0].brand} · {packs[0].size}
+                </p>
+                <p className="font-tabular text-sm text-muted-foreground">
+                  {packs[0].smoked} / {packs[0].size} smoked · {formatPackCost(packs[0].costCents)}
+                </p>
+                <p className="font-tabular text-sm text-muted-foreground">
+                  Opened {formatWhen(packs[0].openedAt, "EEE d MMM, h:mm a")} ·{" "}
+                  {formatElapsedBetween(packs[0].openedAt, new Date(nowMs).toISOString())}
+                </p>
+              </>
+            ) : (
+              <p className="font-medium" data-testid="text-open-pack">
+                No pack open yet
+              </p>
+            )}
+          </div>
+          <div className="flex shrink-0 flex-col gap-2">
+            {packs[0] ? (
+              <Button
+                variant="outline"
+                size="sm"
+                data-testid="button-edit-open-pack"
+                onClick={() => setEditPackOpen(true)}
+              >
+                Edit
+              </Button>
+            ) : null}
+            <Button
+              variant="outline"
+              size="sm"
+              data-testid="button-new-pack"
+              onClick={() => {
+                clearPackDraft();
+                setPackOpen(true);
+              }}
+            >
+              New Pack
+            </Button>
+          </div>
+        </div>
+      </Card>
+      <EditPackDialog
+        open={editPackOpen}
+        onOpenChange={setEditPackOpen}
+        pack={packs[0] ?? null}
+        packs={packs}
+        brands={brands}
+        brandsLoading={brandsLoading}
+        onSaved={() => {
+          refresh.packs();
+          refresh.brands();
         }}
-      >
-        New Pack
-      </Button>
+      />
       <NewPackDialog
         open={packOpen}
         onOpenChange={(next) => {
