@@ -10,7 +10,7 @@ const crypto = require("crypto");
 const { Router } = require("express");
 const db = require("./db");
 const { distributeSmokedAts } = require("./distribute");
-const { createPack, listBrands, listPacks } = require("./packs");
+const { createPack, deletePack, listBrands, listPacks, updatePack } = require("./packs");
 const { closeConflicts } = require("./closeCiggis");
 const {
   isRealDay,
@@ -147,6 +147,17 @@ router.get("/packs", (_req, res) => {
 
 router.post("/packs", (req, res) => {
   const result = createPack(db, req.body ?? {});
+  res.status(result.status).json(result.body);
+});
+
+router.put("/packs/:id", (req, res) => {
+  const result = updatePack(db, req.params.id, req.body ?? {});
+  res.status(result.status).json(result.body);
+});
+
+router.delete("/packs/:id", (req, res) => {
+  const result = deletePack(db, req.params.id);
+  if (result.status === 204) return res.status(204).send();
   res.status(result.status).json(result.body);
 });
 
